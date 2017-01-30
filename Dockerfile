@@ -28,6 +28,6 @@ RUN cd /opt/openMVG && git submodule update --init --recursive
 # Build
 RUN mkdir /opt/openMVG_Build && cd /opt/openMVG_Build && cmake -DCMAKE_BUILD_TYPE=RELEASE \
   -DCMAKE_INSTALL_PREFIX="/opt/openMVG_Build/install" -DOpenMVG_BUILD_TESTS=ON \
-  -DOpenMVG_BUILD_EXAMPLES=ON . ../openMVG/src/ && make
+  -DOpenMVG_BUILD_EXAMPLES=ON . ../openMVG/src/ && make -j 4
 
 RUN cd /opt/openMVG_Build && make test
