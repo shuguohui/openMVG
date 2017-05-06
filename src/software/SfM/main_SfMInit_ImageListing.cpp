@@ -150,7 +150,7 @@ int main(int argc, char **argv)
   int i_GPS_XYZ_method = 0;
 
   double focal_pixels = -1.0;
-
+  int max_fd_pixels = 20000000;//image width * image height
   cmd.add( make_option('i', sImageDir, "imageDirectory") );
   cmd.add( make_option('d', sfileDatabase, "sensorWidthDatabase") );
   cmd.add( make_option('o', sOutputDir, "outputDirectory") );
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
   cmd.add( make_switch('P', "use_pose_prior") );
   cmd.add( make_option('W', sPriorWeights, "prior_weigths"));
   cmd.add( make_option('m', i_GPS_XYZ_method, "gps_to_xyz_method") );
-
+  cmd.add(make_option('x', max_fd_pixels, "max_fd_pixels"));
   try {
       if (argc == 1) throw std::string("Invalid command line parameter.");
       cmd.process(argc, argv);
@@ -187,6 +187,7 @@ int main(int argc, char **argv)
       << "[-m|--gps_to_xyz_method] XZY Coordinate system:\n"
       << "\t 0: ECEF (default)\n"
       << "\t 1: UTM\n"
+	  << "[-m|--max_fd_pixels] max feature detected pixels (default 20000000)\n"
       << std::endl;
 
       std::cerr << s << std::endl;
@@ -201,11 +202,12 @@ int main(int argc, char **argv)
             << "--focal " << focal_pixels << std::endl
             << "--intrinsics " << sKmatrix << std::endl
             << "--camera_model " << i_User_camera_model << std::endl
-            << "--group_camera_model " << b_Group_camera_model << std::endl;
+            << "--group_camera_model " << b_Group_camera_model << std::endl
+			<< "--max_fd_pixels " << max_fd_pixels << std::endl;
 
   // Expected properties for each image
   double width = -1, height = -1, focal = -1, ppx = -1,  ppy = -1;
-
+  int fd_width = -1, fd_height = -1;
   const EINTRINSIC e_User_camera_model = EINTRINSIC(i_User_camera_model);
 
   if ( !stlplus::folder_exists( sImageDir ) )
@@ -310,6 +312,14 @@ int main(int argc, char **argv)
     height = imgHeader.height;
     ppx = width / 2.0;
     ppy = height / 2.0;
+
+	fd_width = imgHeader.width;
+	fd_height = imgHeader.height;
+	while (fd_width * fd_height > max_fd_pixels)
+	{
+		fd_width *= 0.5;
+		fd_height *= 0.5;
+	}
 
     std::unique_ptr<Exif_IO> exifReader(new Exif_IO_EasyExif);
     exifReader->open( sImageFilename );
@@ -427,7 +437,7 @@ int main(int argc, char **argv)
     }
     else
     {
-      View v(*iter_image, views.size(), views.size(), views.size(), width, height);
+      View v(*iter_image, views.size(), views.size(), views.size(), width, height,fd_width,fd_height);
 
       // Add intrinsic related to the image (if any)
       if (intrinsic == NULL)
