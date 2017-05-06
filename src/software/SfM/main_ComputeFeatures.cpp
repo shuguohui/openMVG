@@ -282,7 +282,7 @@ int main(int argc, char **argv)
       //If features or descriptors file are missing, compute them
       if (bForce || !stlplus::file_exists(sFeat) || !stlplus::file_exists(sDesc))
       {
-        if (!ReadImage(sView_filename.c_str(), &imageGray))
+        if (!ReadImage(sView_filename.c_str(), &imageGray,view->fd_width))
           continue;
 
         Image<unsigned char> * mask = nullptr; // The mask is null by default
@@ -303,6 +303,7 @@ int main(int argc, char **argv)
           mask = &imageMask;
 
         // Compute features and descriptors and export them to files
+		//std::cout << "feature detected image size:" << imageGray.Width() << "," << imageGray.Height() << std::endl;
         std::unique_ptr<Regions> regions;
         image_describer->Describe(imageGray, regions, mask);
         image_describer->Save(regions.get(), sFeat, sDesc);

@@ -11,7 +11,7 @@
 
 #include "openMVG/image/image_container.hpp"
 #include "openMVG/image/image_converter.hpp"
-
+#include "openMVG/image/image_resampling.hpp"
 #include <stdio.h>
 #include <vector>
 
@@ -60,7 +60,7 @@ Format GetFormat( const char *c );
 * @retval 0 If there was an error during load operation
 */
 template<typename T>
-int ReadImage( const char * path , Image<T> * image );
+int ReadImage( const char * path , Image<T> * image, int n_fd_width = 0);
 
 /**
 * @brief Save an image<T> from the provided input filename
@@ -364,7 +364,7 @@ bool Read_TIFF_ImageHeader( const char * path , ImageHeader * hdr );
 * @retval 1 if read is correct
 */
 template<>
-inline int ReadImage( const char * path, Image<unsigned char> * im )
+inline int ReadImage( const char * path, Image<unsigned char> * im,int n_fd_width)
 {
   std::vector<unsigned char> ptr;
   int w, h, depth;
@@ -373,6 +373,7 @@ inline int ReadImage( const char * path, Image<unsigned char> * im )
   {
     //convert raw array to Image
     ( *im ) = Eigen::Map<Image<unsigned char>::Base>( &ptr[0], h, w );
+	image::ImageDownSampling((*im), n_fd_width);
   }
   else if ( res == 1 && depth == 3 )
   {
@@ -380,6 +381,7 @@ inline int ReadImage( const char * path, Image<unsigned char> * im )
     RGBColor * ptrCol = reinterpret_cast<RGBColor*>( &ptr[0] );
     Image<RGBColor> rgbColIm;
     rgbColIm = Eigen::Map<Image<RGBColor>::Base>( ptrCol, h, w );
+	image::ImageDownSampling(rgbColIm, n_fd_width);
     //convert RGB to gray
     ConvertPixelType( rgbColIm, im );
   }
@@ -389,6 +391,7 @@ inline int ReadImage( const char * path, Image<unsigned char> * im )
     RGBAColor * ptrCol = reinterpret_cast<RGBAColor*>( &ptr[0] );
     Image<RGBAColor> rgbaColIm;
     rgbaColIm = Eigen::Map<Image<RGBAColor>::Base>( ptrCol, h, w );
+	image::ImageDownSampling(rgbaColIm, n_fd_width);
     //convert RGBA to gray
     ConvertPixelType( rgbaColIm, im );
   }
@@ -408,7 +411,7 @@ inline int ReadImage( const char * path, Image<unsigned char> * im )
 * @retval 1 if read is correct
 */
 template<>
-inline int ReadImage( const char * path, Image<RGBColor> * im )
+inline int ReadImage( const char * path, Image<RGBColor> * im, int n_fd_width)
 {
   std::vector<unsigned char> ptr;
   int w, h, depth;
@@ -418,6 +421,7 @@ inline int ReadImage( const char * path, Image<RGBColor> * im )
     RGBColor * ptrCol = reinterpret_cast<RGBColor*>( &ptr[0] );
     //convert raw array to Image
     ( *im ) = Eigen::Map<Image<RGBColor>::Base>( ptrCol, h, w );
+	image::ImageDownSampling((*im), n_fd_width);
   }
   else if ( res == 1 && depth == 4 )
   {
@@ -425,6 +429,7 @@ inline int ReadImage( const char * path, Image<RGBColor> * im )
     RGBAColor * ptrCol = reinterpret_cast<RGBAColor*>( &ptr[0] );
     Image<RGBAColor> rgbaColIm;
     rgbaColIm = Eigen::Map<Image<RGBAColor>::Base>( ptrCol, h, w );
+	image::ImageDownSampling(rgbaColIm, n_fd_width);
     //convert RGBA to RGB
     ConvertPixelType( rgbaColIm, im );
   }
@@ -443,7 +448,7 @@ inline int ReadImage( const char * path, Image<RGBColor> * im )
 * @retval 1 if read is correct
 */
 template<>
-inline int ReadImage( const char * path, Image<RGBAColor> * im )
+inline int ReadImage( const char * path, Image<RGBAColor> * im, int n_fd_width)
 {
   std::vector<unsigned char> ptr;
   int w, h, depth;
@@ -457,6 +462,7 @@ inline int ReadImage( const char * path, Image<RGBAColor> * im )
     RGBAColor * ptrCol = reinterpret_cast<RGBAColor*>( &ptr[0] );
     //convert raw array to Image
     ( *im ) = Eigen::Map<Image<RGBAColor>::Base>( ptrCol, h, w );
+	image::ImageDownSampling((*im), n_fd_width);
   }
   return res;
 }

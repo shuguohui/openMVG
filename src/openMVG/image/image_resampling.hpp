@@ -43,6 +43,20 @@ void ImageHalfSample( const Image & src , Image & out )
   }
 }
 
+template < typename Image >
+void ImageDownSampling(Image & inout, int n_needWidth)
+{
+	if (n_needWidth <= 0)
+		return;
+	while (inout.Width() > n_needWidth)
+	{
+		Image in;
+		ImageHalfSample(inout, in);
+		inout = in;
+
+	}
+}
+
 /**
 * @brief Image decimation (get only one pixel over two - no interpolation)
 */
