@@ -98,6 +98,10 @@ endif()
 set(EASYEXIF_INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include/openMVG/third_party/easyexif)
 add_subdirectory(easyexif)
 
+# libvot
+set(LIBVOT_INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include/openMVG/third_party/libvot)
+add_subdirectory(libvot)
+
 # Fast corner detector
 set(FAST_INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include/openMVG/third_party/fast)
 add_subdirectory(fast)
