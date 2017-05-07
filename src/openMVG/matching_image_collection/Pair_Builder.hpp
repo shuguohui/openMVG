@@ -19,8 +19,18 @@
 #include "openMVG/types.hpp"
 #include "openMVG/stl/split.hpp"
 
+#include "third_party\libvot\vocab_tree.h"
+#include "third_party\libvot\vot_pipeline.h"
+#include "third_party\libvot\io_utils.h"
 namespace openMVG {
 
+	inline Pair_Set getPairsFromVocabTree(const std::shared_ptr<sfm::Regions_Provider> & regions_provider)
+	{
+		Pair_Set pairs;
+		vot::VocabTree vt;
+
+		return pairs;
+	}
 /// Generate all the (I,J) pairs of the upper diagonal of the NxN matrix
 inline Pair_Set exhaustivePairs(const size_t N)
 {

@@ -55,7 +55,8 @@ enum EPairMode
 {
   PAIR_EXHAUSTIVE = 0,
   PAIR_CONTIGUOUS = 1,
-  PAIR_FROM_FILE  = 2
+  PAIR_FROM_FILE  = 2,
+  PAIR_FROM_VOT = 3,
 };
 
 /// Compute corresponding features between a series of views:
@@ -152,7 +153,7 @@ int main(int argc, char **argv)
             << "--guided_matching " << bGuided_matching << "\n"
             << "--cache_size " << ((ui_max_cache_size == 0) ? "unlimited" : std::to_string(ui_max_cache_size)) << std::endl;
 
-  EPairMode ePairmode = (iMatchingVideoMode == -1 ) ? PAIR_EXHAUSTIVE : PAIR_CONTIGUOUS;
+  EPairMode ePairmode = (iMatchingVideoMode == -1 ) ? PAIR_FROM_VOT : PAIR_CONTIGUOUS;
 
   if (sPredefinedPairList.length()) {
     ePairmode = PAIR_FROM_FILE;
@@ -360,6 +361,12 @@ int main(int argc, char **argv)
               return EXIT_FAILURE;
           }
           break;
+		case PAIR_FROM_VOT:
+		{
+			pairs = getPairsFromVocabTree(regions_provider);
+			savePairs(sMatchesDirectory + "/pairlist.txt",pairs);
+			break;
+		}
       }
       // Photometric matching of putative pairs
       collectionMatcher->Match(sfm_data, regions_provider, pairs, map_PutativesMatches, &progress);
