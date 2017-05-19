@@ -19,9 +19,9 @@
 #include "openMVG/types.hpp"
 #include "openMVG/stl/split.hpp"
 
-#include "third_party\libvot\vocab_tree.h"
-#include "third_party\libvot\vot_pipeline.h"
-#include "third_party\libvot\io_utils.h"
+#include "third_party/libvot/vocab_tree.h"
+#include "third_party/libvot/vot_pipeline.h"
+#include "third_party/libvot/io_utils.h"
 
 #define MAX_ARRAY_SIZE 8388608  // 2^23
 namespace openMVG {
