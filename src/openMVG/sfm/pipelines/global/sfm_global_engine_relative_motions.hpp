@@ -30,10 +30,11 @@ namespace sfm{
 /// - Method: Global Fusion of Relative Motions.
 class GlobalSfMReconstructionEngine_RelativeMotions : public ReconstructionEngine
 {
+public:
 	// Track statistics are the track length and mean reprojection error.
 	typedef std::pair<int, double> TrackStatistics;
 	typedef std::pair<IndexT, TrackStatistics> GridCellElement;
-	typedef std::unordered_map<Vec2i, std::vector<GridCellElement> > ImageGrid;
+	typedef std::unordered_map<int64_t, std::vector<GridCellElement> > ImageGrid;
 
 public:
 
@@ -76,7 +77,17 @@ protected:
   bool SelectGoodTracksForBundleAdjustment();
 
   void ComputeTrackStatistics(const int long_track_length_threshold,
-							 std::unordered_map<IndexT, TrackStatistics>* track_statistics);
+							 std::unordered_map<IndexT, TrackStatistics>& track_statistics);
+
+  void SelectBestTracksFromEachImageGridCell(IndexT viewID, int image_grid_cell_size,
+											const std::unordered_set<IndexT>& trackids,
+											const std::unordered_map<IndexT, TrackStatistics>& track_statistics, 
+											std::unordered_set<IndexT>& tracks_to_optimize);
+
+  void SelectTopRankedTracksInView(const std::unordered_map<IndexT, TrackStatistics>& track_statistics, 
+									const std::unordered_set<IndexT>& trackids,
+									IndexT viewID, int min_num_optimized_tracks_per_view, 
+									std::unordered_set<IndexT>& tracks_to_optimize);
   // Adjust the scene (& remove outliers)
   bool Adjust();
 

@@ -48,6 +48,13 @@ using namespace openMVG::geometry;
 using namespace openMVG::features;
 
 
+// Sorts the grid cell elements by the track statistics, which will sort first
+// by the (truncated) track length, then by the mean reprojection error.
+bool CompareGridCellElements(
+	const std::pair<IndexT, GlobalSfMReconstructionEngine_RelativeMotions::TrackStatistics>& element1,
+	const std::pair<IndexT, GlobalSfMReconstructionEngine_RelativeMotions::TrackStatistics>& element2) {
+	return element1.second < element2.second;
+}
 
 GlobalSfMReconstructionEngine_RelativeMotions::GlobalSfMReconstructionEngine_RelativeMotions(
   const SfM_Data & sfm_data,
@@ -433,10 +440,10 @@ bool GlobalSfMReconstructionEngine_RelativeMotions::Compute_Initial_Structure
 }
 
 void GlobalSfMReconstructionEngine_RelativeMotions::ComputeTrackStatistics(const int long_track_length_threshold,
-	std::unordered_map<IndexT, TrackStatistics>* track_statistics)
+	std::unordered_map<IndexT, TrackStatistics>& track_statistics)
 {
 	const Landmarks& landmarks = sfm_data_.structure;
-	track_statistics->reserve(landmarks.size());
+	track_statistics.reserve(landmarks.size());
 
 	// Compute the track statistics for each track.
 	for (Landmarks::const_iterator citer =  landmarks.begin();
@@ -466,60 +473,169 @@ void GlobalSfMReconstructionEngine_RelativeMotions::ComputeTrackStatistics(const
 			std::min((int)landmark.obs.size(), long_track_length_threshold);
 		const double mean_sq_reprojection_error =
 			sq_reprojection_error_sum / static_cast<double>(landmark.obs.size());
-		track_statistics->emplace(trackID,std::make_pair(truncated_track_length, mean_sq_reprojection_error));
+		track_statistics.emplace(trackID,std::make_pair(truncated_track_length, mean_sq_reprojection_error));
 	}
-	
-
-		
-	
 }
+
+void GlobalSfMReconstructionEngine_RelativeMotions::SelectBestTracksFromEachImageGridCell(
+	IndexT viewID,
+	int image_grid_cell_size,
+	const std::unordered_set<IndexT>& trackids,
+	const std::unordered_map<IndexT, TrackStatistics>& track_statistics,
+	std::unordered_set<IndexT>& tracks_to_optimize)
+{
+	const double inv_grid_cell_size = 1.0 / image_grid_cell_size;
+
+	// Hash each feature into a grid cell.
+	ImageGrid image_grid;
+	
+	for (const IndexT track_id : trackids)
+	{
+		const Landmark& landmark = sfm_data_.structure[track_id];
+		const Vec2& pos = landmark.obs.at(viewID).x;
+		const TrackStatistics& current_track_statistics = track_statistics.at(track_id);
+		int64_t dx = pos[0] * inv_grid_cell_size;
+		int64_t dy = pos[1] * inv_grid_cell_size;
+		int64_t gridID = (dx << 32) | dy;
+
+		image_grid[gridID].emplace_back(track_id, current_track_statistics);
+	}
+
+	// Select the best feature from each grid cell and add it to the tracks to
+	// optimize.
+	for (auto& grid_cell : image_grid) 
+	{
+		// Order the features in each cell by track length first, then mean
+		// reprojection error.
+		const GridCellElement& grid_cell_element =
+			*std::min_element(grid_cell.second.begin(),
+				grid_cell.second.end(),
+				CompareGridCellElements);
+
+		// Insert the track id in to the tracks to optimize.
+		tracks_to_optimize.emplace(grid_cell_element.first);
+	}
+}
+void GlobalSfMReconstructionEngine_RelativeMotions::SelectTopRankedTracksInView(
+	const std::unordered_map<IndexT, TrackStatistics>& track_statistics,
+	const std::unordered_set<IndexT>& trackids,
+	IndexT viewID, int min_num_optimized_tracks_per_view,
+	std::unordered_set<IndexT>& tracks_to_optimize)
+{
+	int num_optimized_tracks = 0;
+	int num_estimated_tracks = 0;
+
+	
+	std::vector<GridCellElement> ranked_candidate_tracks;
+	for (const IndexT track_id : trackids)
+	{
+		const Landmark& landmark = sfm_data_.structure[track_id];
+
+		// We only reach this point if the track is estimated.
+		++num_estimated_tracks;
+
+		// If the track is already slated for optimization, increase the count of
+		// optimized features.
+		if (tracks_to_optimize.find(track_id) != tracks_to_optimize.end())
+		{
+			++num_optimized_tracks;
+			// If the number of optimized_tracks is greater than the minimum then we
+			// can return early since we know that no more features need to added for
+			// this view.
+			if (num_optimized_tracks >= min_num_optimized_tracks_per_view) 
+			{
+				return;
+			}
+		}
+		else 
+		{
+			// If the track is not already set to be optimized then add it to the list
+			// of candidate tracks.
+			ranked_candidate_tracks.emplace_back(track_id, track_statistics.at(track_id));
+		}
+	}
+
+	// We only reach this point if the number of optimized tracks is less than the
+	// minimum. If that is the case then we add the top candidate features until
+	// the minimum number of features observed is met.
+	if (num_optimized_tracks != num_estimated_tracks) 
+	{
+		// Select how many tracks to add. If we need more tracks than are estimated
+		// then we simply add all remaining features.
+		const int num_optimized_tracks_needed =
+			std::min(min_num_optimized_tracks_per_view - num_optimized_tracks,
+				num_estimated_tracks - num_optimized_tracks);
+		std::partial_sort(
+			ranked_candidate_tracks.begin(),
+			ranked_candidate_tracks.begin() + num_optimized_tracks_needed,
+			ranked_candidate_tracks.end());
+		// Add the candidate tracks to the list of tracks to be optimized.
+		for (int i = 0; i < num_optimized_tracks_needed; i++) {
+			tracks_to_optimize.emplace(ranked_candidate_tracks[i].first);
+		}
+	}
+}
+
 bool GlobalSfMReconstructionEngine_RelativeMotions::SelectGoodTracksForBundleAdjustment()
 {
 	const int long_track_length_threshold = 10;
 	const int image_grid_cell_size = 100;
 	const int min_num_optimized_tracks_per_view = 0;
 	// Compute the track mean reprojection errors.
-	std::unordered_map<uint32_t, TrackStatistics> track_statistics;
-	ComputeTrackStatistics(long_track_length_threshold,&track_statistics);
+	std::unordered_map<IndexT, TrackStatistics> track_statistics;
+	ComputeTrackStatistics(long_track_length_threshold,track_statistics);
 
+
+	//collect each view's tracks
+	std::unordered_map<IndexT, std::unordered_set<IndexT> > view_tracks_map;
+	for (Landmarks::const_iterator citer = sfm_data_.structure.begin();
+		citer != sfm_data_.structure.end();
+		++citer)
+	{
+		const IndexT trackID = citer->first;
+		const Landmark& landmark = citer->second;
+		for (Observations::const_iterator citer_obs = landmark.obs.begin();
+			citer_obs != landmark.obs.end();
+			++citer_obs)
+		{
+			const IndexT viewID = citer_obs->first;
+			view_tracks_map[viewID].insert(trackID);
+		}
+	}
 	// For each image, divide the image into a grid and choose the highest quality
 	// tracks from each grid cell. This encourages good spatial coverage of tracks
 	// within each image.
+	std::unordered_set<IndexT> tracks_to_optimize;
+	for(Views::const_iterator citer = sfm_data_.views.begin();
+		citer != sfm_data_.views.end();
+		++citer)
+	{
+		const IndexT viewID = citer->first;
+		SelectBestTracksFromEachImageGridCell(viewID, image_grid_cell_size,view_tracks_map[viewID], track_statistics, tracks_to_optimize);
+	}
 
-	//const auto& view_ids = reconstruction.ViewIds();
-	//for (const ViewId view_id : view_ids) {
-	//	const View* view = reconstruction.View(view_id);
-	//	if (view == nullptr || !view->IsEstimated()) {
-	//		continue;
-	//	}
 
-	//	// Select the best tracks from each grid cell in the image and add them to
-	//	// the container of tracks to be optimized.
-	//	SelectBestTracksFromEachImageGridCell(reconstruction,
-	//		*view,
-	//		image_grid_cell_size,
-	//		track_statistics,
-	//		tracks_to_optimize);
-	//}
+	// To this point, we have only added features that have as full spatial
+	// coverage as possible within each image but we have not ensured that each
+	// image is constrainted by at least K features. So, we cycle through all
+	// views again and add the top M tracks that have not already been added.
+	for (Views::const_iterator citer = sfm_data_.views.begin();
+		citer != sfm_data_.views.end();
+		++citer)
+	{
+		const IndexT viewID = citer->first;
 
-	//// To this point, we have only added features that have as full spatial
-	//// coverage as possible within each image but we have not ensured that each
-	//// image is constrainted by at least K features. So, we cycle through all
-	//// views again and add the top M tracks that have not already been added.
-	//for (const ViewId view_id : view_ids) {
-	//	const View* view = reconstruction.View(view_id);
-	//	if (view == nullptr || !view->IsEstimated()) {
-	//		continue;
-	//	}
+		// If this view is not constrained by enough optimized tracks, add the top
+		// ranked features until there are enough tracks constraining the view.
+		SelectTopRankedTracksInView(track_statistics, view_tracks_map[viewID],viewID,min_num_optimized_tracks_per_view,tracks_to_optimize);
+	}
 
-	//	// If this view is not constrained by enough optimized tracks, add the top
-	//	// ranked features until there are enough tracks constraining the view.
-	//	SelectTopRankedTracksInView(reconstruction,
-	//		track_statistics,
-	//		*view,
-	//		min_num_optimized_tracks_per_view,
-	//		tracks_to_optimize);
-	//}
+	Landmarks newLandmarks;
+	for (auto track_id :  tracks_to_optimize)
+	{
+		newLandmarks[track_id] = sfm_data_.structure[track_id];
+	}
+	sfm_data_.structure.swap(newLandmarks);
 
 	return true;
 }
