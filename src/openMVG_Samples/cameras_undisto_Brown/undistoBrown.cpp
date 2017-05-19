@@ -94,7 +94,7 @@ int main(int argc, char **argv)
     const string sInFileName = stlplus::create_filespec(sPath, stlplus::filename_part(vec_fileNames[j]));
     const int res = ReadImage(sInFileName.c_str(), &tmp_vec, &w, &h, &depth);
 
-    const Pinhole_Intrinsic_Radial_K3 cam(w, h, f, c(0), c(1), k(0), k(1), k(2));
+    const Pinhole_Intrinsic_Radial_K3 cam("",w, h, f, c(0), c(1), k(0), k(1), k(2));
 
     if (res == 1)
     {

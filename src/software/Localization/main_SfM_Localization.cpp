@@ -318,7 +318,7 @@ int main(int argc, char **argv)
     std::shared_ptr<cameras::IntrinsicBase> optional_intrinsic(nullptr);
     if (bUseSingleIntrinsics && num_initial_intrinsics == 1)
     {
-      optional_intrinsic = std::make_shared<cameras::Pinhole_Intrinsic_Radial_K3>(
+      optional_intrinsic = std::make_shared<cameras::Pinhole_Intrinsic_Radial_K3>("",
         imageGray.Width(), imageGray.Height(),
         ptrPinhole->focal(), ptrPinhole->principal_point()[0], ptrPinhole->principal_point()[1],
         ptrPinhole->getParams()[3], ptrPinhole->getParams()[4], ptrPinhole->getParams()[5]);
@@ -357,7 +357,7 @@ int main(int argc, char **argv)
 
         const double focal = (K(0,0) + K(1,1))/2.0;
         const Vec2 principal_point(K(0,2), K(1,2));
-        optional_intrinsic = std::make_shared<cameras::Pinhole_Intrinsic_Radial_K3>(
+        optional_intrinsic = std::make_shared<cameras::Pinhole_Intrinsic_Radial_K3>("",
           imageGray.Width(), imageGray.Height(),
           focal, principal_point(0), principal_point(1));
 
