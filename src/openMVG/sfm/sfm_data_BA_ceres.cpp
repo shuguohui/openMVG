@@ -452,6 +452,15 @@ bool Bundle_Adjustment_Ceres::Adjust
   ceres_config_options.num_linear_solver_threads = ceres_options_.nb_threads_;
   ceres_config_options.parameter_tolerance = ceres_options_.parameter_tolerance_;
 
+  // Use SPARSE_SCHUR for problems smaller than this size and ITERATIVE_SCHUR
+  // for problems larger than this size.
+  int min_cameras_for_iterative_solver = 1000;
+  if (sfm_data.poses.size() > min_cameras_for_iterative_solver)
+  {
+	  ceres_config_options.linear_solver_type = ceres::ITERATIVE_SCHUR;
+	  ceres_config_options.preconditioner_type = ceres::SCHUR_JACOBI;
+  }
+
   // Solve BA
   ceres::Solver::Summary summary;
   ceres::Solve(ceres_config_options, &problem, &summary);
