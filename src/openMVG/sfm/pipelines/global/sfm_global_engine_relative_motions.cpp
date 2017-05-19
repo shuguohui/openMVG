@@ -47,6 +47,8 @@ using namespace openMVG::cameras;
 using namespace openMVG::geometry;
 using namespace openMVG::features;
 
+
+
 GlobalSfMReconstructionEngine_RelativeMotions::GlobalSfMReconstructionEngine_RelativeMotions(
   const SfM_Data & sfm_data,
   const std::string & soutDirectory,
@@ -151,6 +153,11 @@ bool GlobalSfMReconstructionEngine_RelativeMotions::Process() {
 		if (!Compute_Initial_Structure(tripletWise_matches))
 		{
 			std::cerr << "GlobalSfM:: Cannot initialize an initial structure!" << std::endl;
+			return false;
+		}
+		if (!SelectGoodTracksForBundleAdjustment())
+		{
+			std::cerr << "GlobalSfM:: Select GoodTracks For BundleAdjustment failure!" << std::endl;
 			return false;
 		}
 		if(b_save_intermediate_result_)
@@ -425,6 +432,97 @@ bool GlobalSfMReconstructionEngine_RelativeMotions::Compute_Initial_Structure
   return !sfm_data_.structure.empty();
 }
 
+void GlobalSfMReconstructionEngine_RelativeMotions::ComputeTrackStatistics(const int long_track_length_threshold,
+	std::unordered_map<IndexT, TrackStatistics>* track_statistics)
+{
+	const Landmarks& landmarks = sfm_data_.structure;
+	track_statistics->reserve(landmarks.size());
+
+	// Compute the track statistics for each track.
+	for (Landmarks::const_iterator citer =  landmarks.begin();
+		citer != landmarks.end();
+		++citer)
+	{
+		const IndexT trackID = citer->first;
+		const Landmark& landmark = citer->second;
+		double sq_reprojection_error_sum = 0.0;
+		int num_valid_reprojections = 0;
+		// Compute the sq reprojection error for each view that observes the track
+		// and it it to the accumulating sum.
+		for (Observations::const_iterator citer_obs = landmark.obs.begin();
+			citer_obs != landmark.obs.end();
+			++citer_obs)
+		{
+			const IndexT viewID = citer_obs->first;
+			View* pView = sfm_data_.views[viewID].get();
+			cameras::IntrinsicBase* pIntrinsic = sfm_data_.intrinsics[pView->id_intrinsic].get();
+			Vec2 p = pIntrinsic->project(sfm_data_.poses[viewID], landmark.X);
+			sq_reprojection_error_sum += ( p - citer_obs->second.x).squaredNorm();
+		}
+		
+
+		// Set the track statistics in the output map.
+		const int truncated_track_length =
+			std::min((int)landmark.obs.size(), long_track_length_threshold);
+		const double mean_sq_reprojection_error =
+			sq_reprojection_error_sum / static_cast<double>(landmark.obs.size());
+		track_statistics->emplace(trackID,std::make_pair(truncated_track_length, mean_sq_reprojection_error));
+	}
+	
+
+		
+	
+}
+bool GlobalSfMReconstructionEngine_RelativeMotions::SelectGoodTracksForBundleAdjustment()
+{
+	const int long_track_length_threshold = 10;
+	const int image_grid_cell_size = 100;
+	const int min_num_optimized_tracks_per_view = 0;
+	// Compute the track mean reprojection errors.
+	std::unordered_map<uint32_t, TrackStatistics> track_statistics;
+	ComputeTrackStatistics(long_track_length_threshold,&track_statistics);
+
+	// For each image, divide the image into a grid and choose the highest quality
+	// tracks from each grid cell. This encourages good spatial coverage of tracks
+	// within each image.
+
+	//const auto& view_ids = reconstruction.ViewIds();
+	//for (const ViewId view_id : view_ids) {
+	//	const View* view = reconstruction.View(view_id);
+	//	if (view == nullptr || !view->IsEstimated()) {
+	//		continue;
+	//	}
+
+	//	// Select the best tracks from each grid cell in the image and add them to
+	//	// the container of tracks to be optimized.
+	//	SelectBestTracksFromEachImageGridCell(reconstruction,
+	//		*view,
+	//		image_grid_cell_size,
+	//		track_statistics,
+	//		tracks_to_optimize);
+	//}
+
+	//// To this point, we have only added features that have as full spatial
+	//// coverage as possible within each image but we have not ensured that each
+	//// image is constrainted by at least K features. So, we cycle through all
+	//// views again and add the top M tracks that have not already been added.
+	//for (const ViewId view_id : view_ids) {
+	//	const View* view = reconstruction.View(view_id);
+	//	if (view == nullptr || !view->IsEstimated()) {
+	//		continue;
+	//	}
+
+	//	// If this view is not constrained by enough optimized tracks, add the top
+	//	// ranked features until there are enough tracks constraining the view.
+	//	SelectTopRankedTracksInView(reconstruction,
+	//		track_statistics,
+	//		*view,
+	//		min_num_optimized_tracks_per_view,
+	//		tracks_to_optimize);
+	//}
+
+	return true;
+}
 // Adjust the scene (& remove outliers)
 bool GlobalSfMReconstructionEngine_RelativeMotions::Adjust()
 {

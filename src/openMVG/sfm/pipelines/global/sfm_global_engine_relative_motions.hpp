@@ -11,7 +11,8 @@
 
 #include <memory>
 #include <string>
-
+#include <unordered_map>
+#include <unordered_set>
 #include "openMVG/sfm/pipelines/global/GlobalSfM_rotation_averaging.hpp"
 #include "openMVG/sfm/pipelines/global/GlobalSfM_translation_averaging.hpp"
 #include "openMVG/sfm/pipelines/sfm_engine.hpp"
@@ -29,6 +30,11 @@ namespace sfm{
 /// - Method: Global Fusion of Relative Motions.
 class GlobalSfMReconstructionEngine_RelativeMotions : public ReconstructionEngine
 {
+	// Track statistics are the track length and mean reprojection error.
+	typedef std::pair<int, double> TrackStatistics;
+	typedef std::pair<IndexT, TrackStatistics> GridCellElement;
+	typedef std::unordered_map<Vec2i, std::vector<GridCellElement> > ImageGrid;
+
 public:
 
   GlobalSfMReconstructionEngine_RelativeMotions(
@@ -67,6 +73,10 @@ protected:
     matching::PairWiseMatches & tripletWise_matches
   );
 
+  bool SelectGoodTracksForBundleAdjustment();
+
+  void ComputeTrackStatistics(const int long_track_length_threshold,
+							 std::unordered_map<IndexT, TrackStatistics>* track_statistics);
   // Adjust the scene (& remove outliers)
   bool Adjust();
 

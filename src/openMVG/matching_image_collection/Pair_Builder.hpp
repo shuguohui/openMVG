@@ -18,7 +18,9 @@
 
 #include "openMVG/types.hpp"
 #include "openMVG/stl/split.hpp"
-
+#include "openMVG/sfm/sfm_data.hpp"
+#include "openMVG/sfm/pipelines/sfm_regions_provider.hpp"
+#include "openMVG/features/regions.hpp"
 #include "third_party/libvot/vocab_tree.h"
 #include "third_party/libvot/vot_pipeline.h"
 #include "third_party/libvot/io_utils.h"
@@ -36,7 +38,7 @@ namespace openMVG {
 		return samples;
 	}
 
-	inline Pair_Set getPairsFromVocabTree(const sfm::SfM_Data & sfm_data, const std::shared_ptr<sfm::Regions_Provider> & regions_provider)
+	inline Pair_Set getPairsFromVocabTree(const sfm::SfM_Data& sfm_data, const std::shared_ptr<sfm::Regions_Provider>& regions_provider)
 	{
 		Pair_Set pairs;
 		int depth = 6;
@@ -51,7 +53,7 @@ namespace openMVG {
 		size_t total_keys = 0;
 		std::vector<vot::SiftData> sift_data;
 		sift_data.resize(sample_size);
-		sfm::Regions_Provider* provider = regions_provider.get();
+		const sfm::Regions_Provider* provider = regions_provider.get();
 		for (size_t i = 0; i < sample_size; i++)
 		{
 			total_keys += provider->get(siftfile_samples[i])->RegionCount();
