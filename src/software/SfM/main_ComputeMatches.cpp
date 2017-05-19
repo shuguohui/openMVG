@@ -200,7 +200,8 @@ int main(int argc, char **argv)
   // Read SfM Scene (image view & intrinsics data)
   //---------------------------------------
   SfM_Data sfm_data;
-  if (!Load(sfm_data, sSfM_Data_Filename, ESfM_Data(VIEWS|INTRINSICS))) {
+  if (!Load(sfm_data, sSfM_Data_Filename, ESfM_Data(VIEWS|INTRINSICS)))
+  {
     std::cerr << std::endl
       << "The input SfM_Data file \""<< sSfM_Data_Filename << "\" cannot be read." << std::endl;
     return EXIT_FAILURE;
@@ -363,8 +364,11 @@ int main(int argc, char **argv)
           break;
 		case PAIR_FROM_VOT:
 		{
-			pairs = getPairsFromVocabTree(regions_provider);
-			savePairs(sMatchesDirectory + "/pairlist.txt",pairs);
+			if (!loadPairs(sfm_data.GetViews().size(), sMatchesDirectory + "/pairlist.txt", pairs))
+			{
+				pairs = getPairsFromVocabTree(sfm_data, regions_provider);
+				savePairs(sMatchesDirectory + "/pairlist.txt", pairs);
+			}
 			break;
 		}
       }

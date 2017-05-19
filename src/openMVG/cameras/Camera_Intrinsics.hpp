@@ -41,15 +41,19 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   unsigned int w_;
   /// Height of image
   unsigned int h_;
+  // intrinsic identity
+  std::string identity_;
 
   /**
   * @brief Constructor
   * @param w Width of the image
   * @param h Height of the image
   */
-  IntrinsicBase( unsigned int w = 0, unsigned int h = 0 )
-    : w_( w ),
+  IntrinsicBase(const std::string& identity = "", unsigned int w = 0, unsigned int h = 0 )
+    : identity_(identity),
+	  w_( w ),
       h_( h )
+	 
   {
 
   }
@@ -77,6 +81,7 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
     return h_;
   }
 
+  
   /**
   * @brief Compute projection of a 3D point into the image plane
   * (Apply pose, disto (if any) and Intrinsics)
@@ -227,6 +232,7 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   {
     ar( cereal::make_nvp( "width", w_ ) );
     ar( cereal::make_nvp( "height", h_ ) );
+	ar(cereal::make_nvp("identity", identity_));
   }
 
   /**
@@ -238,6 +244,7 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
   {
     ar( cereal::make_nvp( "width", w_ ) );
     ar( cereal::make_nvp( "height", h_ ) );
+	ar(cereal::make_nvp("identity", identity_));
   }
 
   /**
@@ -250,6 +257,7 @@ struct IntrinsicBase : public Clonable<IntrinsicBase>
     stl::hash_combine( seed, static_cast<int>( this->getType() ) );
     stl::hash_combine( seed, w_ );
     stl::hash_combine( seed, h_ );
+	stl::hash_combine(seed, identity_);
     const std::vector<double> params = this->getParams();
     for ( const auto & param : params )
       stl::hash_combine( seed , param );

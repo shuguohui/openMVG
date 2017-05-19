@@ -34,11 +34,11 @@ bool parseDatabase( const std::string& sfileDatabase, std::vector<Datasheet>& ve
         {
           std::vector<std::string> values;
           stl::split(line, ';', values);
-          if ( values.size() == 2 )
+          if ( values.size() == 3 )
           {
             vec_database.emplace_back(
-              values[0], // model
-              atof( values[1].c_str() ) // sensor size
+              values[1], // model
+              atof( values[2].c_str() ) // sensor size
               );
           }
         }

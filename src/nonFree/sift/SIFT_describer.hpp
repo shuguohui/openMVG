@@ -47,10 +47,20 @@ inline void siftDescToUChar(
 class SIFT_Image_describer : public Image_describer
 {
 public:
+	struct SIFT_KeyPoint
+	{
+		SIOPointFeature feature;
+		Descriptor<unsigned char, 128> descriptor;
+		SIFT_KeyPoint(SIOPointFeature _feature, Descriptor<unsigned char, 128> _descriptor)
+			:feature(_feature), descriptor(_descriptor)
+		{
 
+		}
+	};
   struct Params
   {
     Params(
+	  int max_featurepoint = INT_MAX,
       int first_octave = 0,
       int num_octaves = 6,
       int num_scales = 3,
@@ -58,6 +68,7 @@ public:
       float peak_threshold = 0.04f,
       bool root_sift = true
     ):
+	  _max_featurepoint(max_featurepoint),
       _first_octave(first_octave),
       _num_octaves(num_octaves),
       _num_scales(num_scales),
@@ -69,6 +80,7 @@ public:
     void serialize( Archive & ar )
     {
       ar(
+		  cereal::make_nvp("max_featurepoint", _max_featurepoint),
         cereal::make_nvp("first_octave", _first_octave),
         cereal::make_nvp("num_octaves",_num_octaves),
         cereal::make_nvp("num_scales",_num_scales),
@@ -78,6 +90,7 @@ public:
     }
 
     // Parameters
+	int _max_featurepoint;	// max feature points
     int _first_octave;      // Use original image, or perform an upscale if == -1
     int _num_octaves;       // Max octaves count
     int _num_scales;        // Scales per octave
@@ -123,6 +136,23 @@ public:
     return true;
   }
 
+  // Maximum scaled dimension to extract descriptors. If the dimension is larger
+  // than this then we begin to have memory and speed issues.
+  static const int kMaxScaledDim = 3600;
+
+  double GetValidFirstOctave(const int first_octave,
+	  const int width,
+	  const int height) {
+	  const int max_dim = std::max(width, height);
+	  int valid_first_octave = first_octave;
+	  double scale_factor = std::pow(2.0, -1 * valid_first_octave);
+	  while (max_dim * scale_factor >= kMaxScaledDim) {
+		  scale_factor /= 2.0;
+		  ++valid_first_octave;
+	  }
+	  return valid_first_octave;
+  }
+
   /**
   @brief Detect regions on the image and compute their attributes (description)
   @param image Image.
@@ -138,11 +168,13 @@ public:
   ) override
   {
     const int w = image.Width(), h = image.Height();
+	const int first_octave =
+		GetValidFirstOctave(_params._first_octave,w, h);
     //Convert to float
     const image::Image<float> If(image.GetMat().cast<float>());
 
     VlSiftFilt *filt = vl_sift_new(w, h,
-      _params._num_octaves, _params._num_scales, _params._first_octave);
+      _params._num_octaves, _params._num_scales, first_octave);
     if (_params._edge_threshold >= 0)
       vl_sift_set_edge_thresh(filt, _params._edge_threshold);
     if (_params._peak_threshold >= 0)
@@ -159,9 +191,9 @@ public:
     // Build alias to cached data
     SIFT_Regions * regionsCasted = dynamic_cast<SIFT_Regions*>(regions.get());
     // reserve some memory for faster keypoint saving
-    regionsCasted->Features().reserve(2000);
-    regionsCasted->Descriptors().reserve(2000);
-
+ 
+	std::vector<SIFT_KeyPoint> keypoints;
+	keypoints.reserve(2000);
     while (true) {
       vl_sift_detect(filt);
 
@@ -201,8 +233,8 @@ public:
           #pragma omp critical
           #endif
           {
-            regionsCasted->Descriptors().push_back(descriptor);
-            regionsCasted->Features().push_back(fp);
+           
+			  keypoints.emplace_back(fp, descriptor);
           }
         }
       }
@@ -210,6 +242,18 @@ public:
         break; // Last octave
     }
     vl_sift_delete(filt);
+
+	std::sort(keypoints.begin(), keypoints.end(), [&](const SIFT_KeyPoint& i0, const SIFT_KeyPoint&  i1) {return i0.feature.scale() > i1.feature.scale(); });
+
+	int num_feature = std::min((int)keypoints.size(), _params._max_featurepoint);
+	regionsCasted->Features().reserve(num_feature);
+	regionsCasted->Descriptors().reserve(num_feature);
+	for (int i = 0; i < num_feature; i++)
+	{
+		SIFT_KeyPoint& keypoint = keypoints[i];
+		regionsCasted->Descriptors().push_back(keypoint.descriptor);
+		regionsCasted->Features().push_back(keypoint.feature);
+	}
 
     return true;
   };

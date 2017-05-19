@@ -36,7 +36,7 @@ using  class_type = Intrinsic_Spherical;
     unsigned int w = 0,
     unsigned int h = 0
   )
-  : IntrinsicBase(w, h)
+  : IntrinsicBase("",w, h)
   {
   }
 

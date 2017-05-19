@@ -50,11 +50,11 @@ class Pinhole_Intrinsic_Fisheye : public Pinhole_Intrinsic
     * @param k3 Distortion coefficient
     * @param k4 Distortion coefficient
     */
-    Pinhole_Intrinsic_Fisheye(
+    Pinhole_Intrinsic_Fisheye(const std::string& identity="",
       int w = 0, int h = 0,
       double focal = 0.0, double ppx = 0, double ppy = 0,
       double k1 = 0.0, double k2 = 0.0, double k3 = 0.0, double k4 = 0.0 )
-      : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
+      : Pinhole_Intrinsic(identity, w, h, focal, ppx, ppy )
     {
       params_ = {k1, k2, k3, k4};
     }
@@ -157,7 +157,7 @@ class Pinhole_Intrinsic_Fisheye : public Pinhole_Intrinsic
     {
       if ( params.size() == 7 )
       {
-        *this = Pinhole_Intrinsic_Fisheye(
+        *this = Pinhole_Intrinsic_Fisheye(identity_,
                   w_, h_,
                   params[0], params[1], params[2], // focal, ppx, ppy
                   params[3], params[4], params[5], params[6] ); // k1, k2, k3, k4

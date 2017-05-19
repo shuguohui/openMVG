@@ -95,11 +95,11 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
     * @param ppy Principal point on Y-Axis
     * @param k1 Distortion coefficient
     */
-    Pinhole_Intrinsic_Radial_K1(
+    Pinhole_Intrinsic_Radial_K1(const std::string& identity="",
       int w = 0, int h = 0,
       double focal = 0.0, double ppx = 0, double ppy = 0,
       double k1 = 0.0 )
-      : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
+      : Pinhole_Intrinsic(identity, w, h, focal, ppx, ppy )
     {
       params_ = {k1};
     }
@@ -179,7 +179,7 @@ class Pinhole_Intrinsic_Radial_K1 : public Pinhole_Intrinsic
     {
       if ( params.size() == 4 )
       {
-        *this = Pinhole_Intrinsic_Radial_K1(
+        *this = Pinhole_Intrinsic_Radial_K1(identity_,
                   w_, h_,
                   params[0], params[1], params[2], // focal, ppx, ppy
                   params[3] ); //K1
@@ -313,11 +313,11 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
     * @param k2 Second radial distortion coefficient
     * @param k3 Third radial distortion coefficient
     */
-    Pinhole_Intrinsic_Radial_K3(
+    Pinhole_Intrinsic_Radial_K3(const std::string& identity ="",
       int w = 0, int h = 0,
       double focal = 0.0, double ppx = 0, double ppy = 0,
       double k1 = 0.0, double k2 = 0.0, double k3 = 0.0 )
-      : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
+      : Pinhole_Intrinsic(identity, w, h, focal, ppx, ppy )
     {
       params_ = {k1, k2, k3};
     }
@@ -397,7 +397,7 @@ class Pinhole_Intrinsic_Radial_K3 : public Pinhole_Intrinsic
     {
       if ( params.size() == 6 )
       {
-        *this = Pinhole_Intrinsic_Radial_K3(
+        *this = Pinhole_Intrinsic_Radial_K3(identity_,
                   w_, h_,
                   params[0], params[1], params[2], // focal, ppx, ppy
                   params[3], params[4], params[5] ); // K1, K2, K3

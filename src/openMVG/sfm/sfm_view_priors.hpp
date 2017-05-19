@@ -44,9 +44,7 @@ struct ViewPriors : public View
       intrinsic_id,
       pose_id,
       width,
-      height,
-	  width,
-	  height
+      height
     ),
     b_use_pose_center_(false),
     b_use_pose_rotation_(false)

@@ -49,12 +49,12 @@ class Pinhole_Intrinsic_Brown_T2 : public Pinhole_Intrinsic
     * @param t1 First tangential distortion coefficient
     * @param t2 Second tangential distortion coefficient
     */
-    Pinhole_Intrinsic_Brown_T2(
+    Pinhole_Intrinsic_Brown_T2(const std::string& identity="",
       int w = 0, int h = 0,
       double focal = 0.0, double ppx = 0, double ppy = 0,
       double k1 = 0.0, double k2 = 0.0, double k3 = 0.0,
       double t1 = 0.0, double t2 = 0.0 )
-      : Pinhole_Intrinsic( w, h, focal, ppx, ppy )
+      : Pinhole_Intrinsic(identity, w, h, focal, ppx, ppy )
     {
       params_ = {k1, k2, k3, t1, t2};
     }
@@ -131,7 +131,7 @@ class Pinhole_Intrinsic_Brown_T2 : public Pinhole_Intrinsic
     {
       if ( params.size() == 8 )
       {
-        *this = Pinhole_Intrinsic_Brown_T2(
+        *this = Pinhole_Intrinsic_Brown_T2(identity_,
                   w_, h_,
                   params[0], params[1], params[2], // focal, ppx, ppy
                   params[3], params[4], params[5], // K1, K2, K3

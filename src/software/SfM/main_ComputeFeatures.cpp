@@ -65,6 +65,7 @@ int main(int argc, char **argv)
   std::string sImage_Describer_Method = "SIFT";
   bool bForce = false;
   std::string sFeaturePreset = "";
+  int nMaxFeaturePoints = INT_MAX;
 #ifdef OPENMVG_USE_OPENMP
   int iNumThreads = 0;
 #endif
@@ -77,7 +78,7 @@ int main(int argc, char **argv)
   cmd.add( make_option('u', bUpRight, "upright") );
   cmd.add( make_option('f', bForce, "force") );
   cmd.add( make_option('p', sFeaturePreset, "describerPreset") );
-
+  cmd.add(make_option('k', nMaxFeaturePoints, "MaxFeaturePoints"));
 #ifdef OPENMVG_USE_OPENMP
   cmd.add( make_option('n', iNumThreads, "numThreads") );
 #endif
@@ -91,6 +92,7 @@ int main(int argc, char **argv)
       << "[-o|--outdir path] \n"
       << "\n[Optional]\n"
       << "[-f|--force] Force to recompute data\n"
+	  << "[-k|--MaxFeaturePoints] Max Feature points in image\n"
       << "[-m|--describerMethod]\n"
       << "  (method to use to describe an image):\n"
       << "   SIFT (default),\n"
@@ -120,6 +122,7 @@ int main(int argc, char **argv)
             << "--upright " << bUpRight << std::endl
             << "--describerPreset " << (sFeaturePreset.empty() ? "NORMAL" : sFeaturePreset) << std::endl
             << "--force " << bForce << std::endl
+	        << "--MaxFeaturePoints " << nMaxFeaturePoints << std::endl
 #ifdef OPENMVG_USE_OPENMP
             << "--numThreads " << iNumThreads << std::endl
 #endif
@@ -185,13 +188,12 @@ int main(int argc, char **argv)
     if (sImage_Describer_Method == "SIFT")
     {
       image_describer.reset(new SIFT_Image_describer
-        (SIFT_Image_describer::Params(), !bUpRight));
+        (SIFT_Image_describer::Params(nMaxFeaturePoints), !bUpRight));
     }
     else
     if (sImage_Describer_Method == "SIFT_ANATOMY")
     {
-      image_describer.reset(
-        new SIFT_Anatomy_Image_describer(SIFT_Anatomy_Image_describer::Params()));
+      image_describer.reset( new SIFT_Anatomy_Image_describer(SIFT_Anatomy_Image_describer::Params()));
     }
     else
     if (sImage_Describer_Method == "AKAZE_FLOAT")
@@ -282,7 +284,7 @@ int main(int argc, char **argv)
       //If features or descriptors file are missing, compute them
       if (bForce || !stlplus::file_exists(sFeat) || !stlplus::file_exists(sDesc))
       {
-        if (!ReadImage(sView_filename.c_str(), &imageGray,view->fd_width))
+        if (!ReadImage(sView_filename.c_str(), &imageGray,view->ui_width))
           continue;
 
         Image<unsigned char> * mask = nullptr; // The mask is null by default

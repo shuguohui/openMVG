@@ -1001,27 +1001,27 @@ bool SequentialSfMReconstructionEngine::Resection(const uint32_t viewIndex)
         case PINHOLE_CAMERA:
           optional_intrinsic =
             std::make_shared<Pinhole_Intrinsic>
-            (view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
+            ("",view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
         break;
         case PINHOLE_CAMERA_RADIAL1:
           optional_intrinsic =
             std::make_shared<Pinhole_Intrinsic_Radial_K1>
-            (view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
+            ("", view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
         break;
         case PINHOLE_CAMERA_RADIAL3:
           optional_intrinsic =
             std::make_shared<Pinhole_Intrinsic_Radial_K3>
-            (view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
+            ("", view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
         break;
         case PINHOLE_CAMERA_BROWN:
           optional_intrinsic =
             std::make_shared<Pinhole_Intrinsic_Brown_T2>
-            (view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
+            ("", view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
         break;
         case PINHOLE_CAMERA_FISHEYE:
             optional_intrinsic =
                 std::make_shared<Pinhole_Intrinsic_Fisheye>
-            (view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
+            ("", view_I->ui_width, view_I->ui_height, focal, principal_point(0), principal_point(1));
         break;
         default:
           std::cerr << "Try to create an unknown camera type." << std::endl;

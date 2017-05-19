@@ -52,11 +52,11 @@ class Pinhole_Intrinsic : public IntrinsicBase
     * @param ppx Principal point on x-axis
     * @param ppy Principal point on y-axis
     */
-    Pinhole_Intrinsic(
+    Pinhole_Intrinsic(const std::string& identity = "",
       unsigned int w = 0, unsigned int h = 0,
       double focal_length_pix = 0.0,
       double ppx = 0.0, double ppy = 0.0 )
-      : IntrinsicBase( w, h )
+      : IntrinsicBase(identity, w, h )
     {
       K_ << focal_length_pix, 0., ppx, 0., focal_length_pix, ppy, 0., 0., 1.;
       Kinv_ = K_.inverse();
@@ -69,10 +69,11 @@ class Pinhole_Intrinsic : public IntrinsicBase
     * @param K Intrinsic Matrix (3x3) {f,0,ppx; 0,f,ppy; 0,0,1}
     */
     Pinhole_Intrinsic(
+		const std::string& identity,
       unsigned int w,
       unsigned int h,
       const Mat3& K)
-      : IntrinsicBase( w, h ), K_(K)
+      : IntrinsicBase(identity, w, h ), K_(K)
     {
       K_(0,0) = K_(1,1) = (K(0,0) + K(1,1)) / 2.0;
       Kinv_ = K_.inverse();
@@ -231,7 +232,7 @@ class Pinhole_Intrinsic : public IntrinsicBase
     {
       if ( params.size() == 3 )
       {
-        *this = Pinhole_Intrinsic( w_, h_, params[0], params[1], params[2] );
+        *this = Pinhole_Intrinsic(identity_, w_, h_, params[0], params[1], params[2] );
         return true;
       }
       else
@@ -310,7 +311,7 @@ class Pinhole_Intrinsic : public IntrinsicBase
       ar( cereal::make_nvp( "focal_length", focal_length ) );
       std::vector<double> pp( 2 );
       ar( cereal::make_nvp( "principal_point", pp ) );
-      *this = Pinhole_Intrinsic( w_, h_, focal_length, pp[0], pp[1] );
+      *this = Pinhole_Intrinsic(identity_, w_, h_, focal_length, pp[0], pp[1] );
     }
 
     /**

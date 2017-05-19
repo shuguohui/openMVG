@@ -146,11 +146,11 @@ int main(int argc, char **argv)
   int i_User_camera_model = PINHOLE_CAMERA_RADIAL3;
 
   bool b_Group_camera_model = true;
-
+  bool b_search_child_folder = false;
   int i_GPS_XYZ_method = 0;
 
   double focal_pixels = -1.0;
-  int max_fd_pixels = 20000000;//image width * image height
+  //int max_fd_pixels = 20000000;//image width * image height
   cmd.add( make_option('i', sImageDir, "imageDirectory") );
   cmd.add( make_option('d', sfileDatabase, "sensorWidthDatabase") );
   cmd.add( make_option('o', sOutputDir, "outputDirectory") );
@@ -161,7 +161,7 @@ int main(int argc, char **argv)
   cmd.add( make_switch('P', "use_pose_prior") );
   cmd.add( make_option('W', sPriorWeights, "prior_weigths"));
   cmd.add( make_option('m', i_GPS_XYZ_method, "gps_to_xyz_method") );
-  cmd.add(make_option('x', max_fd_pixels, "max_fd_pixels"));
+  cmd.add(make_option('s', b_search_child_folder, "search_child_folder"));
   try {
       if (argc == 1) throw std::string("Invalid command line parameter.");
       cmd.process(argc, argv);
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
       << "[-m|--gps_to_xyz_method] XZY Coordinate system:\n"
       << "\t 0: ECEF (default)\n"
       << "\t 1: UTM\n"
-	  << "[-m|--max_fd_pixels] max feature detected pixels (default 20000000)\n"
+	  << "[-s|--search_child_folder] if true search child folder's images\n"
       << std::endl;
 
       std::cerr << s << std::endl;
@@ -203,11 +203,11 @@ int main(int argc, char **argv)
             << "--intrinsics " << sKmatrix << std::endl
             << "--camera_model " << i_User_camera_model << std::endl
             << "--group_camera_model " << b_Group_camera_model << std::endl
-			<< "--max_fd_pixels " << max_fd_pixels << std::endl;
+			<< "--search_child_folder " << b_search_child_folder << std::endl;
 
   // Expected properties for each image
   double width = -1, height = -1, focal = -1, ppx = -1,  ppy = -1;
-  int fd_width = -1, fd_height = -1;
+  int real_width = -1, real_height = -1;
   const EINTRINSIC e_User_camera_model = EINTRINSIC(i_User_camera_model);
 
   if ( !stlplus::folder_exists( sImageDir ) )
@@ -266,7 +266,24 @@ int main(int argc, char **argv)
     prior_w_info.first = true;
   }
 
-  std::vector<std::string> vec_image = stlplus::folder_files( sImageDir );
+  std::vector<std::string> vec_image = stlplus::folder_files(sImageDir);
+  if (b_search_child_folder)
+  {
+	  std::vector<std::string> vec_sub = stlplus::folder_subdirectories(sImageDir);
+	  for (std::vector<std::string>::const_iterator citer = vec_sub.begin();
+		  citer != vec_sub.end();
+		  ++citer)
+	  {
+		 std::string strSubPath = stlplus::create_filespec(sImageDir, *citer);
+		 std::vector<std::string> vec_subimage = stlplus::folder_files(strSubPath);
+		 for (auto subimage : vec_subimage)
+		 {
+			 vec_image.emplace_back(stlplus::create_filespec(*citer, subimage));
+		 }
+		
+	  }
+  }
+  
   std::sort(vec_image.begin(), vec_image.end());
 
   // Configure an empty scene with Views and their corresponding cameras
@@ -287,7 +304,7 @@ int main(int argc, char **argv)
 
     const std::string sImageFilename = stlplus::create_filespec( sImageDir, *iter_image );
     const std::string sImFilenamePart = stlplus::filename_part(sImageFilename);
-
+	const std::string sImFolderPart = stlplus::folder_part(sImageFilename);
     // Test if the image format is supported:
     if (openMVG::image::GetFormat(sImageFilename.c_str()) == openMVG::image::Unknown)
     {
@@ -307,19 +324,11 @@ int main(int argc, char **argv)
     ImageHeader imgHeader;
     if (!openMVG::image::ReadImageHeader(sImageFilename.c_str(), &imgHeader))
       continue; // image cannot be read
-
     width = imgHeader.width;
     height = imgHeader.height;
-    ppx = width / 2.0;
-    ppy = height / 2.0;
 
-	fd_width = imgHeader.width;
-	fd_height = imgHeader.height;
-	while (fd_width * fd_height > max_fd_pixels)
-	{
-		fd_width *= 0.5;
-		fd_height *= 0.5;
-	}
+	ppx = width / 2.0;
+	ppy = height / 2.0;
 
     std::unique_ptr<Exif_IO> exifReader(new Exif_IO_EasyExif);
     exifReader->open( sImageFilename );
@@ -343,7 +352,6 @@ int main(int argc, char **argv)
     else // If image contains meta data
     {
       const std::string sCamModel = exifReader->getModel();
-
       // Handle case where focal length is equal to 0
       if (exifReader->getFocal() == 0.0f)
       {
@@ -381,23 +389,23 @@ int main(int argc, char **argv)
       {
         case PINHOLE_CAMERA:
           intrinsic = std::make_shared<Pinhole_Intrinsic>
-            (width, height, focal, ppx, ppy);
+            (sImFolderPart,width, height, focal, ppx, ppy);
         break;
         case PINHOLE_CAMERA_RADIAL1:
           intrinsic = std::make_shared<Pinhole_Intrinsic_Radial_K1>
-            (width, height, focal, ppx, ppy, 0.0); // setup no distortion as initial guess
+            (sImFolderPart, width, height, focal, ppx, ppy, 0.0); // setup no distortion as initial guess
         break;
         case PINHOLE_CAMERA_RADIAL3:
           intrinsic = std::make_shared<Pinhole_Intrinsic_Radial_K3>
-            (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0);  // setup no distortion as initial guess
+            (sImFolderPart, width, height, focal, ppx, ppy, 0.0, 0.0, 0.0);  // setup no distortion as initial guess
         break;
         case PINHOLE_CAMERA_BROWN:
           intrinsic =std::make_shared<Pinhole_Intrinsic_Brown_T2>
-            (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0, 0.0, 0.0); // setup no distortion as initial guess
+            (sImFolderPart, width, height, focal, ppx, ppy, 0.0, 0.0, 0.0, 0.0, 0.0); // setup no distortion as initial guess
         break;
         case PINHOLE_CAMERA_FISHEYE:
           intrinsic =std::make_shared<Pinhole_Intrinsic_Fisheye>
-            (width, height, focal, ppx, ppy, 0.0, 0.0, 0.0, 0.0); // setup no distortion as initial guess
+            (sImFolderPart, width, height, focal, ppx, ppy, 0.0, 0.0, 0.0, 0.0); // setup no distortion as initial guess
         break;
         default:
           std::cerr << "Error: unknown camera model: " << (int) e_User_camera_model << std::endl;
@@ -437,7 +445,7 @@ int main(int argc, char **argv)
     }
     else
     {
-      View v(*iter_image, views.size(), views.size(), views.size(), width, height,fd_width,fd_height);
+      View v(*iter_image, views.size(), views.size(), views.size(), width, height);
 
       // Add intrinsic related to the image (if any)
       if (intrinsic == NULL)

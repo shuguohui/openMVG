@@ -173,6 +173,11 @@ bool VocabTree::BuildTree(size_t num_keys, int dim_, int dep, int bf, DTYPE **p,
 	delete [] means;
 	delete [] assign;
 
+	num_nodes = root->CountNodes(branch_num);
+	num_leaves = IndexLeaves();
+	size_t num_leaves1 = root->CountLeaves(branch_num);
+	assert(num_leaves1 == num_leaves);
+
 	std::cout << "[VocabTree Build] Finish building vocabulary tree!\n";
 
 	return true;
@@ -610,36 +615,8 @@ void MultiAddImage(TreeNode *root,
 
 double VocabTree::AddImage2Tree(size_t image_index, SiftData &sift, int thread_num)
 {
-	float *q = new float [num_leaves];
-	for (size_t i = 0; i < num_leaves; i++) {
-		q[i] = 0.0;
-	}
-
-	int sift_num = sift.getFeatureNum();
-	DTYPE *v = sift.getDesPointer();
-
-	size_t off = 0;
-	if (thread_num == 1) {    	// single-thread version
-		for (int i = 0; i < sift_num; i++) {
-			root->DescendFeature(q, v+off, image_index, branch_num, dim, true);
-			off += dim;
-		}
-	}
-	else {
-		std::vector<std::thread> threads;
-		for (int i = 0; i < thread_num; i++) {
-			int thread_feature_num = sift_num / thread_num;
-			if (i == thread_num - 1)
-				thread_feature_num = sift_num - (thread_num - 1) * thread_feature_num;
-			threads.push_back(std::thread(MultiAddImage, root, q, v+off, image_index, thread_feature_num, branch_num, dim, true));
-			off += dim * thread_feature_num;
-		}
-		std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
-	}
-
-	database_image_num++;
-	delete [] q;
-	return 0;
+	return AddImage2Tree(image_index, sift.getFeatureNum(), sift.getDesPointer(), thread_num);
+	
 
 	// (optional) return the image vector magnitude (unnormalized)
 	// double mag = root->ComputeImageVectorMagnitude(branch_num, dis_type);
@@ -654,7 +631,35 @@ double VocabTree::AddImage2Tree(size_t image_index, SiftData &sift, int thread_n
 	//         return 0;
 	// }
 }
+double VocabTree::AddImage2Tree(size_t image_index, int sift_num, DTYPE *v, int thread_num)
+{
+	float *q = new float[num_leaves];
+	for (size_t i = 0; i < num_leaves; i++) {
+		q[i] = 0.0;
+	}
+	size_t off = 0;
+	if (thread_num == 1) {    	// single-thread version
+		for (int i = 0; i < sift_num; i++) {
+			root->DescendFeature(q, v + off, image_index, branch_num, dim, true);
+			off += dim;
+		}
+	}
+	else {
+		std::vector<std::thread> threads;
+		for (int i = 0; i < thread_num; i++) {
+			int thread_feature_num = sift_num / thread_num;
+			if (i == thread_num - 1)
+				thread_feature_num = sift_num - (thread_num - 1) * thread_feature_num;
+			threads.push_back(std::thread(MultiAddImage, root, q, v + off, image_index, thread_feature_num, branch_num, dim, true));
+			off += dim * thread_feature_num;
+		}
+		std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
+	}
 
+	database_image_num++;
+	delete[] q;
+	return 0;
+}
 size_t TreeInNode::DescendFeature(float *q, DTYPE *v, size_t image_index, int branch_num, int dim, bool add)
 {
 	int best_idx = 0;
@@ -856,34 +861,33 @@ bool TreeLeafNode::NormalizeDatabase(int bf, size_t start_id, std::vector<float>
 //                                                                          //
 //////////////////////////////////////////////////////////////////////////////
 size_t leaves_count = 0;    // global leaf counter
-bool VocabTree::Query(SiftData &sift, float *scores)
+
+bool VocabTree::Query(int sift_num, DTYPE *v, float *scores)
 {
-	float *q = new float [num_leaves];
+	float *q = new float[num_leaves];
 	for (size_t i = 0; i < num_leaves; i++) {
 		q[i] = 0.0;
 	}
 
-	int sift_num = sift.getFeatureNum();
-	DTYPE *v = sift.getDesPointer();
 	size_t off = 0;
 	for (int i = 0; i < sift_num; i++) {
-		root->DescendFeature(q, v+off, 0, branch_num, dim, false);
+		root->DescendFeature(q, v + off, 0, branch_num, dim, false);
 		off += dim;
 	}
 
 	double mag = 0.0;
 	switch (dis_type) {
-		case L1:
-			for (size_t i = 0; i < num_leaves; i++)
-				mag += q[i];
-			break;
-		case L2:
-			for (size_t i = 0; i < num_leaves; i++)
-				mag += q[i] * q[i];
-			break;
-		default:
-			std::cout << "[Error] Unknow distance type in query database\n";
-			return false;
+	case L1:
+		for (size_t i = 0; i < num_leaves; i++)
+			mag += q[i];
+		break;
+	case L2:
+		for (size_t i = 0; i < num_leaves; i++)
+			mag += q[i] * q[i];
+		break;
+	default:
+		std::cout << "[Error] Unknow distance type in query database\n";
+		return false;
 	}
 	if (dis_type == L2)
 		mag = sqrt(mag);
@@ -893,9 +897,14 @@ bool VocabTree::Query(SiftData &sift, float *scores)
 	}
 	root->ScoreQuery(q, branch_num, dis_type, scores);
 
-	delete [] q;
+	delete[] q;
 
 	return true;
+}
+bool VocabTree::Query(SiftData &sift, float *scores)
+{
+	return Query(sift.getFeatureNum(), sift.getDesPointer(), scores);
+	
 }
 
 size_t VocabTree::IndexLeaves()

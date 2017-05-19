@@ -35,11 +35,9 @@ struct View
   // Index of intrinsics and the pose
   IndexT id_intrinsic, id_pose;
 
-  // image size
+  // image size(image feature detected size)
   IndexT ui_width, ui_height;
 
-  // image feature detected size
-  IndexT fd_width, fd_height;
 
   // Constructor (use unique index for the view_id)
  // View(
@@ -60,11 +58,9 @@ struct View
 	  IndexT intrinsic_id = UndefinedIndexT,
 	  IndexT pose_id = UndefinedIndexT,
 	  IndexT width = UndefinedIndexT,
-	  IndexT height = UndefinedIndexT,
-	  IndexT feature_detected_width = UndefinedIndexT,
-	  IndexT feature_detected_height = UndefinedIndexT)
+	  IndexT height = UndefinedIndexT)
 	  :s_Img_path(sImgPath), id_view(view_id), id_intrinsic(intrinsic_id),
-	  id_pose(pose_id), ui_width(width), ui_height(height), fd_width(feature_detected_width), fd_height(feature_detected_height)
+	  id_pose(pose_id), ui_width(width), ui_height(height)
   {
 
   }
@@ -81,8 +77,6 @@ struct View
        cereal::make_nvp("filename", stlplus::filename_part(s_Img_path)),
        cereal::make_nvp("width", ui_width),
        cereal::make_nvp("height", ui_height),
-	   cereal::make_nvp("fd_width", fd_width),
-	   cereal::make_nvp("fd_height", fd_height),
        cereal::make_nvp("id_view", id_view),
        cereal::make_nvp("id_intrinsic", id_intrinsic),
        cereal::make_nvp("id_pose", id_pose));
@@ -103,8 +97,6 @@ struct View
        cereal::make_nvp("filename", filename),
        cereal::make_nvp("width", ui_width),
        cereal::make_nvp("height", ui_height),
-	   cereal::make_nvp("fd_width", fd_width),
-	   cereal::make_nvp("fd_height", fd_height),
        cereal::make_nvp("id_view", id_view),
        cereal::make_nvp("id_intrinsic", id_intrinsic),
        cereal::make_nvp("id_pose", id_pose));
