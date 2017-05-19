@@ -30,7 +30,8 @@ public:
   )
   :sOut_directory_(soutDirectory),
     sfm_data_(sfm_data),
-    intrinsic_refinement_options_(cameras::Intrinsic_Parameter_Type::ADJUST_ALL)
+    intrinsic_refinement_options_(cameras::Intrinsic_Parameter_Type::ADJUST_ALL),
+	b_save_intermediate_result_(false)
   {
   }
 
@@ -59,6 +60,11 @@ public:
     b_use_motion_prior_ = rhs;
   }
 
+  void Set_Save_intermediate_result(bool b_save_intermediate_result)
+  {
+	  b_save_intermediate_result_ = b_save_intermediate_result;
+  }
+
   const SfM_Data & Get_SfM_Data() const {return sfm_data_;}
 
 protected:
@@ -74,6 +80,7 @@ protected:
   //-----
   cameras::Intrinsic_Parameter_Type intrinsic_refinement_options_;
   bool b_use_motion_prior_;
+  bool b_save_intermediate_result_;
 };
 
 } // namespace sfm
