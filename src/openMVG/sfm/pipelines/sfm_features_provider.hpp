@@ -17,7 +17,7 @@
 #include "openMVG/features/regions.hpp"
 #include "openMVG/sfm/sfm_data.hpp"
 #include "openMVG/types.hpp"
-
+#include "openMVG/stl/convert.hpp"
 #include "third_party/progress/progress_display.hpp"
 
 namespace openMVG {
@@ -53,7 +53,7 @@ struct Features_Provider
       {
         const std::string sImageName = stlplus::create_filespec(sfm_data.s_root_path, iter->second->s_Img_path);
         const std::string basename = stlplus::basename_part(sImageName);
-        const std::string featFile = stlplus::create_filespec(feat_directory, basename, ".feat");
+        const std::string featFile = stlplus::create_filespec(feat_directory, stl::convert_to_string(iter->second->id_view), ".feat");
 
         std::unique_ptr<features::Regions> regions(region_type->EmptyClone());
         if (!stlplus::file_exists(featFile) || !regions->LoadFeatures(featFile))

@@ -17,7 +17,7 @@
 #include "openMVG/features/regions_factory.hpp"
 #include "openMVG/sfm/sfm_data.hpp"
 #include "openMVG/types.hpp"
-
+#include "openMVG/stl/convert.hpp"
 #include "third_party/progress/progress.hpp"
 
 namespace openMVG {
@@ -115,8 +115,8 @@ public:
       {
         const std::string sImageName = stlplus::create_filespec(sfm_data.s_root_path, iter->second->s_Img_path);
         const std::string basename = stlplus::basename_part(sImageName);
-        const std::string featFile = stlplus::create_filespec(feat_directory, basename, ".feat");
-        const std::string descFile = stlplus::create_filespec(feat_directory, basename, ".desc");
+        const std::string featFile = stlplus::create_filespec(feat_directory, stl::convert_to_string(iter->second->id_view), ".feat");
+        const std::string descFile = stlplus::create_filespec(feat_directory, stl::convert_to_string(iter->second->id_view), ".desc");
 
         std::unique_ptr<features::Regions> regions_ptr(region_type->EmptyClone());
         if (!regions_ptr->Load(featFile, descFile))

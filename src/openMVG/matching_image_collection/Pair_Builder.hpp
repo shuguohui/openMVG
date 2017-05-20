@@ -113,32 +113,40 @@ namespace openMVG {
 		
 		// build a vocabulary tree using sift keys
 #ifdef OPENMVG_USE_OPENMP
-		int thread_num = omp_get_max_threads();
+		int num_thread = omp_get_max_threads();
 #else 
-		int thread_num = 1;
+		int num_thread = 1;
 #endif
 		vot::VocabTree vt;
-		if (!vt.BuildTree(total_keys, FDIM, depth, branch_num, mem_pointer, thread_num))
-		{
+		bool bBuildSuccess = vt.BuildTree(total_keys, FDIM, depth, branch_num, mem_pointer, num_thread);
+		
+		// free memory
+		delete[] mem_pointer;
+		for (size_t i = 0; i < num_arrays; i++)
+			delete[] mem[i];
+		delete[] mem;
+		if(!bBuildSuccess)
 			return pairs;
-		}
+		
 		vt.SetConstantWeight();
 		for (size_t i = 0; i < num_view; ++i)
 		{
 			features::Regions* region = provider->get(i).get();
 
-			const double mag = vt.AddImage2Tree( i, region->RegionCount(), (DTYPE*)region->DescriptorRawData(), thread_num);
+			const double mag = vt.AddImage2Tree( i, region->RegionCount(), (DTYPE*)region->DescriptorRawData(), num_thread);
 			std::cout << "[BuildDB] Add image #" <<  i << " to database\n";
 		}
 		vt.ComputeTFIDFWeight(num_view);
 		vt.NormalizeDatabase(0, num_view);
 
+		
+
 		size_t db_image_num = vt.database_image_num;
 		size_t num_matches = 100;
 #ifdef OPENMVG_USE_OPENMP
-		std::vector<std::vector<float> > scores(thread_num);
-		std::vector<std::vector<size_t> > indexed_scores(thread_num);
-		for (int i = 0; i < thread_num; i++) 
+		std::vector<std::vector<float> > scores(num_thread);
+		std::vector<std::vector<size_t> > indexed_scores(num_thread);
+		for (int i = 0; i < num_thread; i++)
 		{
 			scores[i].resize(db_image_num);
 			indexed_scores[i].resize(db_image_num);
@@ -156,10 +164,11 @@ namespace openMVG {
 #ifdef OPENMVG_USE_OPENMP
 			int thread_num = omp_get_thread_num();
 			std::vector<float>& vscores = scores[thread_num];
+			memset(&vscores[0], 0, sizeof(float) * db_image_num);
 			std::vector<size_t>& vindexed_scores = indexed_scores[thread_num];
 			vt.Query(region->RegionCount(), (DTYPE*)region->DescriptorRawData(), &vscores[0]);
 			std::sort(vindexed_scores.begin(), vindexed_scores.end(),[&](size_t i0, size_t i1) {return vscores[i0] > vscores[i1]; });
-			size_t num_length = std::min(num_matches, vindexed_scores.size());
+			size_t num_length = std::min(num_matches, db_image_num);
 #pragma omp critical 
 			{
 				for (size_t j = 0; j < num_length; j++)
@@ -178,6 +187,8 @@ namespace openMVG {
 
 			std::sort(indexed_scores.begin(), indexed_scores.end(),
 				[&](size_t i0, size_t i1) {return scores[i0] > scores[i1]; });
+
+
 			size_t num_length = std::min(num_matches, indexed_scores.size());
 			for (size_t j = 0; j < num_length; j++)
 			{

@@ -138,7 +138,7 @@ public:
 
   // Maximum scaled dimension to extract descriptors. If the dimension is larger
   // than this then we begin to have memory and speed issues.
-  static const int kMaxScaledDim = 3600;
+  static const int kMaxScaledDim = 3600; 
 
   double GetValidFirstOctave(const int first_octave,
 	  const int width,

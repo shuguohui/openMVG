@@ -14,7 +14,7 @@
 #include <openMVG/matching/indMatch.hpp>
 #include "openMVG/matching/indMatch_utils.hpp"
 #include "openMVG/stl/stl.hpp"
-
+#include "openMVG/stl/convert.hpp"
 #include "openMVG/sfm/sfm.hpp"
 #include "openMVG/graph/graph.hpp"
 
@@ -497,7 +497,7 @@ bool ColorHarmonizationEngineGlobal::ReadInputData()
     const size_t camIndex = i;
     if ( !loadFeatsFromFile(
             stlplus::create_filespec( _sMatchesPath,
-                                      stlplus::basename_part( _vec_fileNames[ camIndex ] ),
+				stl::convert_to_string(sfm_data.GetViews().at(camIndex)->id_view),
                                       ".feat" ),
             _map_feats[ camIndex ] ) )
     {

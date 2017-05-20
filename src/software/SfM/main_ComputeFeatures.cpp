@@ -13,7 +13,7 @@
 #include "openMVG/sfm/sfm_data.hpp"
 #include "openMVG/sfm/sfm_data_io.hpp"
 #include "openMVG/system/timer.hpp"
-
+#include "openMVG/stl/convert.hpp"
 #include "third_party/cmdLine/cmdLine.h"
 #include "third_party/progress/progress_display.hpp"
 #include "third_party/stlplus3/filesystemSimplified/file_system.hpp"
@@ -276,10 +276,11 @@ int main(int argc, char **argv)
       Views::const_iterator iterViews = sfm_data.views.begin();
       std::advance(iterViews, i);
       const View * view = iterViews->second.get();
+	  
       const std::string
         sView_filename = stlplus::create_filespec(sfm_data.s_root_path, view->s_Img_path),
-        sFeat = stlplus::create_filespec(sOutDir, stlplus::basename_part(sView_filename), "feat"),
-        sDesc = stlplus::create_filespec(sOutDir, stlplus::basename_part(sView_filename), "desc");
+        sFeat = stlplus::create_filespec(sOutDir, stl::convert_to_string(view->id_view), "feat"),
+        sDesc = stlplus::create_filespec(sOutDir, stl::convert_to_string(view->id_view), "desc");
 
       //If features or descriptors file are missing, compute them
       if (bForce || !stlplus::file_exists(sFeat) || !stlplus::file_exists(sDesc))
