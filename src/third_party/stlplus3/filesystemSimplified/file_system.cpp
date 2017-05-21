@@ -834,7 +834,7 @@ namespace stlplus
         if (strentry.compare(".")!=0 && strentry.compare("..")!=0)
         {
           std::string subpath = create_filespec(dir, strentry);
-          if (((subdirs && is_folder(subpath)) || (files && is_file(subpath))) && (wildcard(wild, strentry)))
+          if (((subdirs && is_folder(subpath)) || (files && is_file(subpath))))
             results.push_back(strentry);
         }
       }
