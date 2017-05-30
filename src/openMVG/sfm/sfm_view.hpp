@@ -38,7 +38,8 @@ struct View
   // image size(image feature detected size)
   IndexT ui_width, ui_height;
 
-
+  std::unordered_map<IndexT, IndexT> features; //track_id,feature_id
+  bool is_estimated;
   // Constructor (use unique index for the view_id)
  // View(
  //   const std::string & sImgPath = "",
@@ -59,7 +60,7 @@ struct View
 	  IndexT pose_id = UndefinedIndexT,
 	  IndexT width = UndefinedIndexT,
 	  IndexT height = UndefinedIndexT)
-	  :s_Img_path(sImgPath), id_view(view_id), id_intrinsic(intrinsic_id),
+	  :s_Img_path(sImgPath), id_view(view_id), id_intrinsic(intrinsic_id), is_estimated(false),
 	  id_pose(pose_id), ui_width(width), ui_height(height)
   {
 

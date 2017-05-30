@@ -88,6 +88,8 @@ private:
   /// Bundle adjustment to refine Structure; Motion and Intrinsics
   bool BundleAdjustment();
 
+  bool PartialBundleAdjustment();
+
   /// Discard track with too large residual error
   bool badTrackRejector(double dPrecision, size_t count = 0);
 
@@ -111,7 +113,15 @@ private:
   openMVG::tracks::STLMAPTracks map_tracks_; // putative landmark tracks (visibility per 3D point)
   Hash_Map<IndexT, double> map_ACThreshold_; // Per camera confidence (A contrario estimated threshold error)
 
-  std::set<uint32_t> set_remaining_view_id_;     // Remaining camera index that can be used for resection
+  std::set<IndexT> set_remaining_view_id_;     // Remaining camera index that can be used for resection
+
+    // An *ordered* container to keep track of which views have been added to the
+  // reconstruction. This is used to determine which views are optimized during
+  // partial BA.
+  std::vector<IndexT> reconstructed_views_;
+
+  // Indicates the number of views that have been optimized with full BA.
+  IndexT num_optimized_views_;
 };
 
 } // namespace sfm

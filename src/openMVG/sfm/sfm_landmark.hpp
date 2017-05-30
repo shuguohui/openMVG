@@ -54,7 +54,6 @@ struct Landmark
 {
   Vec3 X;
   Observations obs;
-
   // Serialization
   template <class Archive>
   void save( Archive & ar) const

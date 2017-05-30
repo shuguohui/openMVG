@@ -10,7 +10,7 @@
 #include "openMVG/sfm/sfm_data.hpp"
 #include "openMVG/stl/stl.hpp"
 #include "openMVG/tracks/union_find.hpp"
-
+#include "openMVG/system/timer.hpp"
 #include <utility>
 
 namespace openMVG {
@@ -159,6 +159,7 @@ bool eraseMissingPoses
     if (it->second < min_points_per_pose)
     {
       sfm_data.poses.erase(it->first);
+	  sfm_data.views[it->first]->is_estimated = false;
       ++removed_elements;
     }
   }
@@ -191,13 +192,16 @@ bool eraseObservationsWithMissingPoses
       if (pose_Index.count(v->id_pose) == 0)
       {
         itObs = obs.erase(itObs);
+		sfm_data.views[ViewId]->features.erase(itLandmarks->first);
         ++removed_elements;
       }
       else
         ++itObs;
     }
-    if (obs.empty() || obs.size() < min_points_per_landmark)
-      itLandmarks = sfm_data.structure.erase(itLandmarks);
+	if (obs.empty() || obs.size() < min_points_per_landmark)
+	{
+		itLandmarks = sfm_data.structure.erase(itLandmarks);
+	}
     else
       ++itLandmarks;
   }
@@ -212,6 +216,7 @@ bool eraseUnstablePosesAndObservations
   const IndexT min_points_per_landmark
 )
 {
+	system::Timer timer;
   // First remove orphan observation(s) (observation using an undefined pose)
   eraseObservationsWithMissingPoses(sfm_data, min_points_per_landmark);
   // Then iteratively remove orphan poses & observations
@@ -228,7 +233,7 @@ bool eraseUnstablePosesAndObservations
     remove_iteration += bRemovedContent ? 1 : 0;
   }
   while (bRemovedContent);
-
+  std::cout << "eraseUnstablePosesAndObservations Task done in (ms): " << timer.elapsedMs() << std::endl;
   return remove_iteration > 0;
 }
 

@@ -11,7 +11,7 @@
 
 #include "openMVG/numeric/eigen_alias_definition.hpp"
 #include "openMVG/sfm/sfm_data_BA.hpp"
-
+#include "openMVG/types.hpp"
 namespace ceres { class CostFunction; }
 namespace openMVG { namespace cameras { struct IntrinsicBase; } }
 namespace openMVG { namespace sfm { struct SfM_Data; } }
@@ -63,6 +63,15 @@ class Bundle_Adjustment_Ceres : public Bundle_Adjustment
     // tell which parameter needs to be adjusted
     const Optimize_Options options
   ) override;
+  bool PartialAdjust
+  (
+	  // the SfM scene to refine
+	  sfm::SfM_Data & sfm_data,
+	  const std::vector<IndexT>& reconstructed_views_,
+	  // tell which parameter needs to be adjusted
+	  const Optimize_Options options
+  );
+  
 };
 
 } // namespace sfm

@@ -22,7 +22,7 @@
 
 #include <memory>
 #include <utility>
-
+#include "openMVG/system/timer.hpp"
 namespace openMVG {
 namespace sfm {
 
@@ -43,6 +43,7 @@ namespace sfm {
     geometry::Pose3 & pose
   )
   {
+	  system::Timer timer;
     // --
     // Compute the camera pose (resectioning)
     // --
@@ -95,7 +96,7 @@ namespace sfm {
       KernelType kernel(resection_data.pt2D, resection_data.pt3D, pinhole_cam->K());
       // Robust estimation of the Projection matrix and it's precision
       const std::pair<double,double> ACRansacOut =
-        openMVG::robust::ACRANSAC(kernel, resection_data.vec_inliers, resection_data.max_iteration, &P, dPrecision, true);
+        openMVG::robust::ACRANSAC(kernel, resection_data.vec_inliers, resection_data.max_iteration, &P, dPrecision, false);
       // Update the upper bound precision of the model found by AC-RANSAC
       resection_data.error_max = ACRansacOut.first;
     }
@@ -119,6 +120,7 @@ namespace sfm {
       << "-- #Points used for Resection: " << resection_data.pt2D.cols() << "\n"
       << "-- #Points validated by robust Resection: " << resection_data.vec_inliers.size() << "\n"
       << "-- Threshold: " << resection_data.error_max << "\n"
+	  << "-- time: " << timer.elapsedMs() << " (ms)\n"
       << "-------------------------------" << std::endl;
 
     return bResection;
@@ -166,6 +168,7 @@ namespace sfm {
       Structure_Parameter_Type::NONE // STRUCTURE must remain constant
     );
     Bundle_Adjustment_Ceres bundle_adjustment_obj;
+	bundle_adjustment_obj.ceres_options().bVerbose_ = false;
     const bool b_BA_Status = bundle_adjustment_obj.Adjust(
       sfm_data,
       ba_refine_options);
